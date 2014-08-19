@@ -17,5 +17,11 @@ namespace EntityFramework.WriteToServer.Extensions
             var provider = new BulkOperationProvider(context);
             provider.Insert(entities, batchSize);
         }
+
+        public static void BulkInsertNoTransaction<T>(this DbContext context, IEnumerable<T> entities, int batchSize = DefaultBatchSize)
+        {
+            var provider = new BulkOperationProvider(context);
+            provider.InsertNoTransaction(entities, batchSize);
+        }
     }
 }

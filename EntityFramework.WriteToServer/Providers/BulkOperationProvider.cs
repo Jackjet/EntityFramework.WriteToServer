@@ -50,10 +50,31 @@ namespace EntityFramework.WriteToServer.Providers
             }
         }
 
+        public void InsertNoTransaction<T>(IEnumerable<T> entities, int batchSize)
+        {
+            using (var dbConnection = new SqlConnection(_connectionString))
+            {
+                dbConnection.Open();
+
+                var tableMapping = DbMapper.GetDbMapping(_context)[typeof(T)];
+                using (var dataTable = CreateDataTable(tableMapping, entities))
+                {
+                    using (var sqlBulkCopy = new SqlBulkCopy(dbConnection))
+                    {
+                        sqlBulkCopy.BatchSize = batchSize;
+                        sqlBulkCopy.DestinationTableName = dataTable.TableName;
+                        sqlBulkCopy.WriteToServer(dataTable);
+                    }
+                }
+
+                dbConnection.Close();
+            }
+        }
+
         private void Insert<T>(IEnumerable<T> entities, SqlTransaction transaction, SqlBulkCopyOptions options,
             int batchSize)
         {
-            TableMapping tableMapping = DbMapper.GetDbMapping(_context)[typeof (T)];
+            TableMapping tableMapping = DbMapper.GetDbMapping(_context)[typeof(T)];
             using (DataTable dataTable = CreateDataTable(tableMapping, entities))
             {
                 using (var sqlBulkCopy = new SqlBulkCopy(transaction.Connection, options, transaction))
@@ -97,7 +118,7 @@ namespace EntityFramework.WriteToServer.Providers
 
         private static DataTable BuildDataTable<T>(TableMapping tableMapping)
         {
-            Type entityType = typeof (T);
+            Type entityType = typeof(T);
             string tableName = string.Join(@".", tableMapping.SchemaName, tableMapping.TableName);
 
             var dataTable = new DataTable(tableName);
@@ -125,8 +146,8 @@ namespace EntityFramework.WriteToServer.Providers
                 if (columnMapping.IsIdentity)
                 {
                     dataColumn.Unique = true;
-                    if (propertyInfo.PropertyType == typeof (int)
-                        || propertyInfo.PropertyType == typeof (long))
+                    if (propertyInfo.PropertyType == typeof(int)
+                        || propertyInfo.PropertyType == typeof(long))
                     {
                         dataColumn.AutoIncrement = true;
                     }
@@ -137,7 +158,7 @@ namespace EntityFramework.WriteToServer.Providers
                     dataColumn.DefaultValue = columnMapping.DefaultValue;
                 }
 
-                if (propertyInfo.PropertyType == typeof (string))
+                if (propertyInfo.PropertyType == typeof(string))
                 {
                     dataColumn.MaxLength = columnMapping.MaxLength;
                 }
